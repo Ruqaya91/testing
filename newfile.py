@@ -1,38 +1,36 @@
-import hashlib
+import mysql.connector
+from getpass import getpass
 
-# Hash a password for storing
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+# Database connection configuration
+db_config = {
+    "host": "localhost",      # Change to your host, e.g., '127.0.0.1'
+    "user": "root",           # Your MySQL username
+    "password": "your_mysql_password",  # Your MySQL password
+    "database": "your_database_name"    # The database containing the users table
+}
 
-# Register a new user
-def register(username, password):
-    with open("users.txt", "a") as f:
-        f.write(f"{username}:{hash_password(password)}\n")
-    print("User registered.")
+# Connect to the MySQL database
+try:
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
+except mysql.connector.Error as err:
+    print(f"Error connecting to MySQL: {err}")
+    exit(1)
 
-# Verify login
-def login(username, password):
-    hashed = hash_password(password)
-    try:
-        with open("users.txt", "r") as f:
-            for line in f:
-                stored_user, stored_hash = line.strip().split(":")
-                if username == stored_user and hashed == stored_hash:
-                    print("Login Successful")
-                    return
-        print("Login Failed")
-    except FileNotFoundError:
-        print("No users registered yet.")
+# Get user input
+username = input("Enter your username: ")
+password = getpass("Enter your password: ")  # hides input for password
 
-# Example usage:
-print("1. Register\n2. Login")
-choice = input("Choose (1 or 2): ")
-uname = input("Username: ")
-pwd = input("Password: ")
+# Query to check credentials
+query = "SELECT * FROM users WHERE username = %s AND password = %s"
+cursor.execute(query, (username, password))
 
-if choice == "1":
-    register(uname, pwd)
-elif choice == "2":
-    login(uname, pwd)
+result = cursor.fetchone()
+
+if result:
+    print("Login Successful")
 else:
-    print("Invalid choice")
+    print("Login Failed")
+
+cursor.close()
+conn.close()
